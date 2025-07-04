@@ -1,0 +1,17 @@
+vars:
+  address-groups:
+    HOME_NET: "any"
+  port-groups:
+    HOME_NET_PORTS: "3389"
+default-log-dir: /var/log/suricata
+outputs:
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      community-id: true
+      types:
+        - alert
+        - http
+        - dns
+        - flow

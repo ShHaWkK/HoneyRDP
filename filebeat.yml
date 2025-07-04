@@ -1,0 +1,7 @@
+filebeat.inputs:
+  - type: log
+    paths:
+      - /var/log/suricata/eve.json
+output.logstash:
+  # Adresse de votre instance Logstash distante
+  hosts: ["logstash.example.com:5044"]
