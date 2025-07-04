@@ -1,0 +1,115 @@
+---
+- name: Ensure Docker is installed
+  apt:
+    name: docker.io
+    state: present
+  become: yes
+
+- name: Install docker-compose
+  apt:
+    name: docker-compose
+    state: present
+  become: yes
+
+- name: Copy docker-compose
+  copy:
+    src: ../../../../docker-compose.yml
+    dest: /opt/honeypot/docker-compose.yml
+  become: yes
+
+
+- name: Copy suricata config
+  copy:
+    src: ../../../../suricata
+    dest: /opt/honeypot/suricata
+  become: yes
+
+- name: Deploy containers
+  command: docker-compose up -d
+  args:
+    chdir: /opt/honeypot
+  become: yes
+
+- name: Schedule Suricata rule update
+  cron:
+    name: suricata-update
+    user: root
+    job: "docker exec suricata suricata-update && docker restart suricata"
+    minute: 0
+    hour: 3
+  become: yes
+
+- name: Create lure directory
+  win_file:
+    path: C:\\ImportantData
+    state: directory
+
+- name: Copy lure files
+  win_copy:
+    src: ../files/lures/
+    dest: C:\\ImportantData
+
+- name: Copy monitoring scripts
+  win_copy:
+    src: ../../../scripts/
+    dest: C:\\HoneypotScripts
+
+- name: Copy wallpaper
+  win_copy:
+    src: ../files/wallpaper.b64
+    dest: C:\\HoneypotScripts\\wallpaper.b64
+
+- name: Schedule session recorder
+  win_scheduled_task:
+    name: HoneypotRecorder
+    description: Capture RDP screen activity
+    actions:
+      - path: powershell.exe
+        arguments: "-ExecutionPolicy Bypass -File C:\\HoneypotScripts\\session_recorder.ps1"
+    triggers:
+      - logon
+    state: present
+
+- name: Schedule command logger
+  win_scheduled_task:
+    name: HoneypotCmdLogger
+    description: Log PowerShell and CMD commands
+    actions:
+      - path: powershell.exe
+        arguments: "-ExecutionPolicy Bypass -File C:\\HoneypotScripts\\ps_session_logger.ps1"
+    triggers:
+      - logon
+    state: present
+
+- name: Schedule lure rotation
+  win_scheduled_task:
+    name: RotateLures
+    description: Refresh lure documents daily
+    actions:
+      - path: powershell.exe
+        arguments: "-ExecutionPolicy Bypass -File C:\\HoneypotScripts\\rotate_lures.ps1"
+    triggers:
+      - daily
+    state: present
+
+- name: Schedule keystroke logger
+  win_scheduled_task:
+    name: KeyLogger
+    description: Capture keyboard activity
+    actions:
+      - path: powershell.exe
+        arguments: "-ExecutionPolicy Bypass -File C:\\HoneypotScripts\\keystroke_logger.ps1"
+    triggers:
+      - logon
+    state: present
+
+- name: Setup desktop appearance
+  win_scheduled_task:
+    name: SetupDesktop
+    description: Prepare desktop with wallpaper and shortcuts
+    actions:
+      - path: powershell.exe
+        arguments: "-ExecutionPolicy Bypass -File C:\\HoneypotScripts\\setup_desktop.ps1"
+    triggers:
+      - logon
+    state: present

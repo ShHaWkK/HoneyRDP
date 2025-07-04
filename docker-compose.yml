@@ -1,0 +1,19 @@
+version: '3'
+services:
+  suricata:
+    image: jasonish/suricata:latest
+    volumes:
+      - ./suricata:/etc/suricata
+      - suridata:/var/log/suricata
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:8.10.2
+    volumes:
+      - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - suridata:/var/log/suricata
+    network_mode: host
+volumes:
+  suridata:
