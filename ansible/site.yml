@@ -1,4 +1,10 @@
 ---
+- hosts: sensor
+  gather_facts: yes
+  become: yes
+  roles:
+    - honeypot
+
 - hosts: honeypot
   gather_facts: yes
   roles:
