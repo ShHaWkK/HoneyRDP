@@ -4,18 +4,24 @@
     name: docker.io
     state: present
   become: yes
+  when: ansible_os_family != 'Windows'
+  tags: docker
 
 - name: Install docker-compose
   apt:
     name: docker-compose
     state: present
   become: yes
+  when: ansible_os_family != 'Windows'
+  tags: docker
 
 - name: Copy docker-compose
   copy:
     src: ../../../../docker-compose.yml
     dest: /opt/honeypot/docker-compose.yml
   become: yes
+  when: ansible_os_family != 'Windows'
+  tags: docker
 
 
 - name: Copy suricata config
@@ -23,12 +29,16 @@
     src: ../../../../suricata
     dest: /opt/honeypot/suricata
   become: yes
+  when: ansible_os_family != 'Windows'
+  tags: docker
 
 - name: Deploy containers
   command: docker-compose up -d
   args:
     chdir: /opt/honeypot
   become: yes
+  when: ansible_os_family != 'Windows'
+  tags: docker
 
 - name: Schedule Suricata rule update
   cron:
@@ -38,26 +48,36 @@
     minute: 0
     hour: 3
   become: yes
+  when: ansible_os_family != 'Windows'
+  tags: docker
 
 - name: Create lure directory
   win_file:
     path: C:\\ImportantData
     state: directory
+  when: ansible_os_family == 'Windows'
+  tags: powershell
 
 - name: Copy lure files
   win_copy:
     src: ../files/lures/
     dest: C:\\ImportantData
+  when: ansible_os_family == 'Windows'
+  tags: powershell
 
 - name: Copy monitoring scripts
   win_copy:
     src: ../../../scripts/
     dest: C:\\HoneypotScripts
+  when: ansible_os_family == 'Windows'
+  tags: powershell
 
 - name: Copy wallpaper
   win_copy:
     src: ../files/wallpaper.b64
     dest: C:\\HoneypotScripts\\wallpaper.b64
+  when: ansible_os_family == 'Windows'
+  tags: powershell
 
 - name: Schedule session recorder
   win_scheduled_task:
@@ -69,6 +89,8 @@
     triggers:
       - logon
     state: present
+  when: ansible_os_family == 'Windows'
+  tags: powershell
 
 - name: Schedule command logger
   win_scheduled_task:
@@ -80,6 +102,8 @@
     triggers:
       - logon
     state: present
+  when: ansible_os_family == 'Windows'
+  tags: powershell
 
 - name: Schedule lure rotation
   win_scheduled_task:
@@ -91,6 +115,8 @@
     triggers:
       - daily
     state: present
+  when: ansible_os_family == 'Windows'
+  tags: powershell
 
 - name: Schedule keystroke logger
   win_scheduled_task:
@@ -102,6 +128,8 @@
     triggers:
       - logon
     state: present
+  when: ansible_os_family == 'Windows'
+  tags: powershell
 
 - name: Setup desktop appearance
   win_scheduled_task:
@@ -113,3 +141,5 @@
     triggers:
       - logon
     state: present
+  when: ansible_os_family == 'Windows'
+  tags: powershell
