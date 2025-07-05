@@ -1,4 +1,7 @@
 ---
+collections:
+  - ansible.windows
+
 - hosts: honeypot
   gather_facts: no
   tasks:
@@ -8,6 +11,12 @@
         name: fDenyTSConnections
         data: 0
         type: dword
+
+    - name: Ensure Remote Desktop service is running
+      win_service:
+        name: TermService
+        start_mode: auto
+        state: started
 
     - name: Configure WinRM for basic auth
       win_shell: |
@@ -40,7 +49,7 @@
 
     - name: Clone HoneyRDP repository
       win_git:
-        repo: https://github.com/user/HoneyRDP.git
+        repo: https://github.com/ShHaWkK/HoneyRDP.git
         dest: C:\HoneyRDP
         force: yes
 
@@ -50,17 +59,24 @@
         dest: C:\HoneyRDP\scripts
 
     - name: Schedule SessionRecorder task
-      win_shell: >-
-        schtasks /Create /TN SessionRecorder
-        /TR "powershell.exe -ExecutionPolicy Bypass -File C:\HoneyRDP\scripts\session_recorder.ps1"
-        /SC ONLOGON /RL HIGHEST /F
+      win_scheduled_task:
+        name: SessionRecorder
+        description: Capture RDP screen activity
+        actions:
+          - path: powershell.exe
+            arguments: >-
+              -ExecutionPolicy Bypass -File C:\HoneyRDP\scripts\session_recorder.ps1
+        triggers:
+          - logon
+        run_level: highest
+        state: present
 
 - hosts: sensor
   gather_facts: no
   become: yes
   tasks:
-    - name: Activate promiscuous mode on ens18
-      command: ip link set ens18 promisc on
+    - name: Activate promiscuous mode on mirror
+      command: ip link set mirror promisc on
       args:
         warn: false
 
