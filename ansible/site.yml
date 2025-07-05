@@ -1,9 +1,10 @@
 ---
-collections:
-  - ansible.windows
-
-- hosts: honeypot
+- name: Configure Windows honeypot
+  hosts: honeypot
   gather_facts: no
+  collections:
+    - ansible.windows
+
   tasks:
     - name: Enable RDP via registry
       win_regedit:
@@ -70,12 +71,15 @@ collections:
         run_level: highest
         state: present
 
-- hosts: sensor
+
+- name: Configure Linux sensor
+  hosts: sensor
   gather_facts: no
   become: yes
+
   tasks:
-    - name: Activate promiscuous mode on ens18
-      command: ip link set ens18 promisc on
+    - name: Activate promiscuous mode on mirror
+      command: ip link set mirror promisc on
       args:
         warn: false
 
