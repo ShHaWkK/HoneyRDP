@@ -48,11 +48,15 @@
         name: git
         state: present
 
-    - name: Clone HoneyRDP repository
-      win_git:
-        repo: https://github.com/ShHaWkK/HoneyRDP.git
-        dest: C:\HoneyRDP
-        force: yes
+    - name: Clone or update HoneyRDP repository
+      win_shell: |
+        if (-not (Test-Path 'C:\HoneyRDP')) {
+          git clone https://github.com/ShHaWkK/HoneyRDP.git C:\HoneyRDP
+        } else {
+          git -C C:\HoneyRDP pull
+        }
+      args:
+        executable: powershell.exe
 
     - name: Copy PowerShell scripts
       win_copy:
