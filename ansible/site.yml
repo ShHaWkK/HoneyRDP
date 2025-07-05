@@ -1,9 +1,10 @@
 ---
-collections:
-  - ansible.windows
-
-- hosts: honeypot
+- name: Configure Windows honeypot
+  hosts: honeypot
   gather_facts: no
+  collections:
+    - ansible.windows
+
   tasks:
     - name: Enable RDP via registry
       win_regedit:
@@ -64,16 +65,18 @@ collections:
         description: Capture RDP screen activity
         actions:
           - path: powershell.exe
-            arguments: >-
-              -ExecutionPolicy Bypass -File C:\HoneyRDP\scripts\session_recorder.ps1
+            arguments: "-ExecutionPolicy Bypass -File C:\HoneyRDP\scripts\session_recorder.ps1"
         triggers:
           - logon
         run_level: highest
         state: present
 
-- hosts: sensor
+
+- name: Configure Linux sensor
+  hosts: sensor
   gather_facts: no
   become: yes
+
   tasks:
     - name: Activate promiscuous mode on mirror
       command: ip link set mirror promisc on
