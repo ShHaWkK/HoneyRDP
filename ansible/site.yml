@@ -65,7 +65,7 @@
         description: Capture RDP screen activity
         actions:
           - path: powershell.exe
-            arguments: "-ExecutionPolicy Bypass -File C:\HoneyRDP\scripts\session_recorder.ps1"
+            arguments: '-ExecutionPolicy Bypass -File C:\HoneyRDP\scripts\session_recorder.ps1'
         triggers:
           - logon
         run_level: highest
