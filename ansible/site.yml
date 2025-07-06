@@ -4,7 +4,6 @@
   gather_facts: no
   collections:
     - ansible.windows
-
   tasks:
     - name: Enable RDP via registry
       win_regedit:
@@ -19,127 +18,78 @@
         start_mode: auto
         state: started
 
-    - name: Configure WinRM for basic auth
-      win_shell: |
-        winrm quickconfig -force
-        winrm set winrm/config/service @{AllowUnencrypted="true"}
-        winrm set winrm/config/service/auth @{Basic="true"}
+    - name: Create rdpuser account
+      win_user:
+        name: rdpuser
+        password: "{{ rdpuser_password }}"
+        state: present
+        groups:
+          - Remote Desktop Users
+          - Administrators
 
-    - name: Allow RDP in firewall
+    - name: Allow RDP TCP in firewall
       win_firewall_rule:
-        name: RDP-In
+        name: RDP-TCP
         localport: 3389
-        action: allow
-        direction: in
         protocol: tcp
+        direction: in
+        action: allow
         state: present
 
-    - name: Allow WinRM in firewall
+    - name: Allow RDP UDP in firewall
       win_firewall_rule:
-        name: WinRM-In
-        localport: 5985
-        action: allow
+        name: RDP-UDP
+        localport: 3389
+        protocol: udp
         direction: in
+        action: allow
+        state: present
+
+    - name: WinRM quickconfig
+      win_shell: winrm quickconfig -force
+
+    - name: Allow unencrypted WinRM
+      win_shell: winrm set winrm/config/service @{AllowUnencrypted="true"}
+
+    - name: Enable basic auth for WinRM
+      win_shell: winrm set winrm/config/service/auth @{Basic="true"}
+
+    - name: Allow remote access for WinRM
+      win_shell: winrm set winrm/config/service @{AllowRemoteAccess="true"}
+
+    - name: Open WinRM firewall
+      win_firewall_rule:
+        name: WinRM-TCP
+        localport: 5985
         protocol: tcp
+        direction: in
+        action: allow
         state: present
 
-    - name: Ensure Git is installed
-      win_chocolatey:
-        name: git
-        state: present
+    - name: Test WinRM connectivity
+      win_ping:
 
-    - name: Clone or update HoneyRDP repository
-      win_shell: |
-        if (-not (Test-Path 'C:\HoneyRDP')) {
-          git clone https://github.com/ShHaWkK/HoneyRDP.git C:\HoneyRDP
-        } else {
-          git -C C:\HoneyRDP pull
-        }
-      args:
-        executable: powershell.exe
-
-    - name: Copy PowerShell scripts
-      win_copy:
-        src: "{{ playbook_dir }}/../scripts/"
-        dest: C:\HoneyRDP\scripts
-
-    - name: Schedule SessionRecorder task
-      win_scheduled_task:
-        name: SessionRecorder
-        description: Capture RDP screen activity
-        actions:
-          - path: powershell.exe
-            arguments: '-ExecutionPolicy Bypass -File C:\HoneyRDP\scripts\session_recorder.ps1'
-        triggers:
-          - logon
-        run_level: highest
-        state: present
-
-
-- name: Configure Linux sensor
+- name: Deploy Suricata and Filebeat
   hosts: sensor
   gather_facts: no
   become: yes
-
   tasks:
-    - name: Activate promiscuous mode on mirror
-      command: ip link set mirror promisc on
-      args:
-        warn: false
-
-    - name: Configure static IP on ens192
-      copy:
-        dest: /etc/network/interfaces.d/ens192.cfg
-        content: |
-          auto ens192
-          iface ens192 inet static
-              address 192.168.100.67/24
-
-    - name: Install required packages
-      apt:
-        name:
-          - openssh-server
-          - git
-          - docker.io
-          - docker-compose
-        state: present
-        update_cache: yes
-
-    - name: Ensure ansible user exists
-      user:
-        name: ansible
-        groups: sudo
-        shell: /bin/bash
-        state: present
-
-    - name: Deploy SSH key for ansible user
-      authorized_key:
-        user: ansible
-        key: "{{ lookup('file', '/home/kali/.ssh/id_ed25519_honeysensor.pub') }}"
-        state: present
-
-    - name: Ensure /opt/honeypot directory exists
-      file:
-        path: /opt/honeypot
-        state: directory
-
-    - name: Copy docker-compose.yml
+    - name: Copy docker-compose file
       copy:
         src: "{{ playbook_dir }}/../docker-compose.yml"
         dest: /opt/honeypot/docker-compose.yml
 
-    - name: Copy suricata configuration
+    - name: Copy Suricata configuration
       copy:
         src: "{{ playbook_dir }}/../suricata/"
         dest: /opt/honeypot/suricata
-        mode: '0644'
 
-    - name: Copy filebeat configuration
+    - name: Copy Filebeat configuration
       copy:
         src: "{{ playbook_dir }}/../filebeat.yml"
         dest: /opt/honeypot/filebeat.yml
 
-    - name: Start Suricata and Filebeat containers
+    - name: Start containers
       command: docker-compose up -d
       args:
         chdir: /opt/honeypot
